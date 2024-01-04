@@ -7,10 +7,10 @@ from telegram import Update
 # import uuid
 from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater
 
-from srai_athena_frontend_telegram.job_manager import JobManager
 from srai_athena_frontend_telegram.service_sceduling import ServiceSceduling
 from srai_athena_frontend_telegram.service_telegram_bot import ServiceTelegramBot
 from srai_athena_frontend_telegram.skill.postplan import Postplan
+from srai_athena_frontend_telegram.skill.scedule import Scedule
 from srai_athena_frontend_telegram.skill.skill_base import SkillBase
 
 # Enable logging
@@ -27,7 +27,6 @@ class SraiTelegramBot(ServiceTelegramBot):
         self.list_available_command.append("help")
         self.list_available_command.append("image_tag")
         self.list_available_command.append("chat_id")
-        self.job_manager = JobManager(self)
         self.service_sceduling = ServiceSceduling(self)
         self.updater = None
 
@@ -77,6 +76,7 @@ class SraiTelegramBot(ServiceTelegramBot):
             self.updater.dispatcher.add_handler(CommandHandler("chat_id", self.chat_id))
             # dp.add_handler(CommandHandler("reset", self.reset))
             self.register_skill(Postplan())
+            self.register_skill(Scedule())
 
             # log all errors
             self.updater.dispatcher.add_error_handler(self.error)  # type: ignore
@@ -89,7 +89,6 @@ class SraiTelegramBot(ServiceTelegramBot):
             raise e
 
         # start services
-        self.job_manager.start()
         self.service_sceduling.start()
         # send a message to jaap about update
         self.message_admins(f"Startup succes with image tag {self.get_image_tag()}")
@@ -111,16 +110,15 @@ class SraiTelegramBot(ServiceTelegramBot):
         bot = self.updater.bot
         bot.send_message(chat_id=self.root_id, text=text)
 
-    def send_transcript(
-        self,
-        chat_id: str,
-        transcript_id: str,
-    ):
+    def message_chat(self, chat_id: str, text: str):
         bot = self.updater.bot
-        bot.send_message(chat_id=chat_id, text="Transcription:")
+        bot.send_message(chat_id=chat_id, text=text)
 
 
 if __name__ == "__main__":
     telegram_token = os.environ.get("SRAI_TELEGRAM_TOKEN")
+    if telegram_token is None:
+        raise Exception("SRAI_TELEGRAM_TOKEN not set")
+
     bot = SraiTelegramBot(token=telegram_token)
     bot.main()

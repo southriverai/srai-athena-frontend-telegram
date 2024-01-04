@@ -2,5 +2,5 @@ requests==2.31.0
 python_telegram_bot~=13.11
 pytube==15.0.0 #TODO move this to srai-job-ingest
 openai==1.6.1 #TODO move this to a other dependency
-srai-core>=0.10.2
+srai-core>=0.10.3
 pymongo==4.6.1
