@@ -1,49 +1,59 @@
-import datetime
-import json
 import os
+import time
 
 from openai import OpenAI
-from telegram import Update
-from telegram.ext import CallbackContext
 
+from srai_athena_frontend_telegram.service_sceduling import ServiceSceduling
+from srai_athena_frontend_telegram.service_telegram_bot import ServiceTelegramBot
+from srai_athena_frontend_telegram.skill.command_base import CommandBase
 from srai_athena_frontend_telegram.skill.skill_base import SkillBase
 
 
+class CommandSceduleShow(CommandBase):
+    def __init__(self, skill: SkillBase) -> None:
+        super().__init__(skill, "scedule_show")
+
+    def execute_command(self, chat_id: int, command_message: str) -> None:
+        skill_state = self.skill.load_skill_state(chat_id)
+        list_scedule_items = ServiceSceduling.get_instance().get_scedule_items(chat_id)
+        if len(list_scedule_items) == 0:
+            self.skill.service_telegram_bot.message_chat(chat_id, "No scedule items")
+            return
+        message = ""
+        for scedule_item in list_scedule_items:
+            time_until = scedule_item.sceduled_time - int(time.time())
+            message += f"{scedule_item.scedule_item_id} time until {time_until}"
+            message += f"{scedule_item.message}\n"
+        self.skill.service_telegram_bot.message_chat(chat_id, message)
+        self.skill.save_skill_state(chat_id, skill_state)
+
+
+class CommandSceduleSet(CommandBase):
+    def __init__(self, skill: SkillBase) -> None:
+        super().__init__(skill, "scedule_set")
+
+    def execute_command(self, chat_id: int, command_message: str) -> None:
+        ServiceSceduling.get_instance().add_scedule(chat_id)
+        message = (
+            "All your daily messages are now scheduled to the current time of day and will fire 30 seconds from now"
+        )
+        self.skill.service_telegram_bot.message_chat(chat_id, message)
+
+
+class CommandSceduleStop(CommandBase):
+    def __init__(self, skill: SkillBase) -> None:
+        super().__init__(skill, "scedule_stop")
+
+    def execute_command(self, chat_id: int, command_message: str) -> None:
+        ServiceSceduling.get_instance().remove_scedule_item_all(chat_id)
+        message = "All your daily messages are now stopped"
+        self.skill.service_telegram_bot.message_chat(chat_id, message)
+
+
 class Scedule(SkillBase):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, service_telegram_bot: ServiceTelegramBot):
+        super().__init__(service_telegram_bot)
         self.client_openai = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-
-    def get_command_dict(self) -> dict:
-        dict_command = {}
-        dict_command["scedule_show"] = self.parse_message_scedule_show
-        dict_command["scedule_set"] = self.parse_message_scedule_set
-        dict_command["scedule_stop"] = self.parse_message_scedule_stop
-        return dict_command
-
-    def parse_message_scedule_show(self, update: Update, context: CallbackContext):
-        skill_state = self.load_skill_state(update.message.chat_id)
-        message = self.scedule_show(skill_state, update.message.text)
-        self.save_skill_state(update.message.chat_id, skill_state)
-        update.message.reply_text(message)
-
-    def parse_message_scedule_set(self, update: Update, context: CallbackContext):
-        skill_state = self.load_skill_state(update.message.chat_id)
-        message = self.scedule_set(skill_state, update.message.text)
-        self.save_skill_state(update.message.chat_id, skill_state)
-        update.message.reply_text(message)
-
-    def parse_message_scedule_stop(self, update: Update, context: CallbackContext):
-        skill_state = self.load_skill_state(update.message.chat_id)
-        message = self.scedule_stop(skill_state, update.message.text)
-        self.save_skill_state(update.message.chat_id, skill_state)
-        update.message.reply_text(message)
-
-    def scedule_show(self, skill_state: dict, message: str):
-        return "scedule_show"
-
-    def scedule_set(self, skill_state: dict, message: str):
-        return "scedule_set"
-
-    def scedule_stop(self, skill_state: dict, message: str):
-        return "scedule_stop"
+        self.add_command(CommandSceduleShow(self))
+        self.add_command(CommandSceduleSet(self))
+        self.add_command(CommandSceduleStop(self))

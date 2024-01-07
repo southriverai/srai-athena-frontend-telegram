@@ -2,16 +2,14 @@ import logging
 import os
 
 from telegram import Update
-
-# from telegram import Update, Voice, Bot
-# import uuid
-from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater
+from telegram.ext import CallbackContext, CommandHandler, Updater
 
 from srai_athena_frontend_telegram.service_sceduling import ServiceSceduling
 from srai_athena_frontend_telegram.service_telegram_bot import ServiceTelegramBot
-from srai_athena_frontend_telegram.skill.postplan import Postplan
+
+# from srai_athena_frontend_telegram.skill.postplan import Postplan
 from srai_athena_frontend_telegram.skill.scedule import Scedule
-from srai_athena_frontend_telegram.skill.skill_base import SkillBase
+from srai_athena_frontend_telegram.skill.support import Support
 
 # Enable logging
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -21,25 +19,26 @@ logger = logging.getLogger(__name__)
 
 class SraiTelegramBot(ServiceTelegramBot):
     def __init__(self, token: str):
-        super().__init__(token)
-        self.root_id = os.environ["TELEGRAM_ROOT_ID"]  # 1325892490
+        root_id = int(os.environ["TELEGRAM_ROOT_ID"])
+        super().__init__(token, root_id)
         self.list_available_command = []
         self.list_available_command.append("help")
         self.list_available_command.append("image_tag")
         self.list_available_command.append("chat_id")
-        self.service_sceduling = ServiceSceduling(self)
-        self.updater = None
 
     def help(self, update: Update, context: CallbackContext):
         """Send a message when the command /help is issued."""
         message = "Available commands:\n"
         for command in self.list_available_command:
             message += f"/{command}\n"
+
+        for command in self.dict_command.keys():
+            message += f"/{command}\n"
         update.message.reply_text(message)
 
     def chat_id(self, update: Update, context: CallbackContext):
         """Send a message when the command /help is issued."""
-        update.message.reply_text(update.message.chat_id)
+        update.message.reply_text(str(update.message.chat_id))
 
     def get_image_tag(self):
         image_tag = os.environ.get("IMAGE_TAG")
@@ -57,13 +56,7 @@ class SraiTelegramBot(ServiceTelegramBot):
         """Log Errors caused by Updates."""
         logger.warning('Update "%s" caused error "%s"', update, context.error)
 
-    def register_skill(self, skill: SkillBase):
-        for command_name, command in skill.get_command_dict().items():
-            # TODO check duplicate commands
-            self.updater.dispatcher.add_handler(CommandHandler(command_name, command))
-            self.list_available_command.append(command_name)
-
-    def main(self):
+    def initialize(self):
         """Start the bot."""
         # Create the Updater and pass it your bot's token.
         # Make sure to set use_context=True to use the new context based callbacks
@@ -75,8 +68,9 @@ class SraiTelegramBot(ServiceTelegramBot):
             self.updater.dispatcher.add_handler(CommandHandler("image_tag", self.image_tag))
             self.updater.dispatcher.add_handler(CommandHandler("chat_id", self.chat_id))
             # dp.add_handler(CommandHandler("reset", self.reset))
-            self.register_skill(Postplan())
-            self.register_skill(Scedule())
+            # self.register_skill(Postplan())
+            self.register_skill(Scedule(self))
+            self.register_skill(Support(self))
 
             # log all errors
             self.updater.dispatcher.add_error_handler(self.error)  # type: ignore
@@ -88,8 +82,7 @@ class SraiTelegramBot(ServiceTelegramBot):
             )
             raise e
 
-        # start services
-        self.service_sceduling.start()
+    def main(self):
         # send a message to jaap about update
         self.message_admins(f"Startup succes with image tag {self.get_image_tag()}")
         #
@@ -102,18 +95,6 @@ class SraiTelegramBot(ServiceTelegramBot):
         # TODO have this come from
         self.updater.idle()
 
-    def message_root(self, text: str):
-        bot = self.updater.bot
-        bot.send_message(chat_id=self.root_id, text=text)
-
-    def message_admins(self, text: str):
-        bot = self.updater.bot
-        bot.send_message(chat_id=self.root_id, text=text)
-
-    def message_chat(self, chat_id: str, text: str):
-        bot = self.updater.bot
-        bot.send_message(chat_id=chat_id, text=text)
-
 
 if __name__ == "__main__":
     telegram_token = os.environ.get("SRAI_TELEGRAM_TOKEN")
@@ -121,4 +102,12 @@ if __name__ == "__main__":
         raise Exception("SRAI_TELEGRAM_TOKEN not set")
 
     bot = SraiTelegramBot(token=telegram_token)
+    # initialize services
+    ServiceSceduling.initialize(bot)
+    bot.initialize()
+
+    # start services
+    ServiceSceduling.get_instance().start()  # TODO there is a race condition here
+
+    # start bot
     bot.main()

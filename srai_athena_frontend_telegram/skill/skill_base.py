@@ -1,15 +1,23 @@
 import os
 from abc import ABC, abstractmethod
+from copy import copy
 from hashlib import sha256
 from typing import Callable
 
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
+from srai_athena_frontend_telegram.skill.command_base import CommandBase
+
 
 class SkillBase(ABC):
-    def __init__(self) -> None:
+    def __init__(self, service_telegram_bot) -> None:
         self.skill_name = self.__class__.__name__
+
+        from srai_athena_frontend_telegram.service_telegram_bot import ServiceTelegramBot  # avoiding circular import
+
+        self.service_telegram_bot: ServiceTelegramBot = service_telegram_bot
+        self.command_dict = {}
 
         connection_string = os.environ["MONGODB_CONNECTION_STRING"]
         database_name = os.environ["MONGODB_DATABASE_NAME"]
@@ -35,9 +43,11 @@ class SkillBase(ABC):
         else:
             self.collection.update_one({"_id": key_hash}, {"$set": {"skill_state": skill_state}})
 
-    @abstractmethod
+    def add_command(self, command: CommandBase) -> None:
+        self.command_dict[command.command_name] = command
+
     def get_command_dict(self) -> dict:
-        raise NotImplementedError()
+        return copy(self.command_dict)
 
     def has_command_audio(self) -> bool:
         return False

@@ -6,12 +6,13 @@ from openai import OpenAI
 from telegram import Update
 from telegram.ext import CallbackContext
 
+from srai_athena_frontend_telegram.service_telegram_bot import ServiceTelegramBot
 from srai_athena_frontend_telegram.skill.skill_base import SkillBase
 
 
 class Postplan(SkillBase):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, service_telegram_bot: ServiceTelegramBot):
+        super().__init__(service_telegram_bot)
         self.client_openai = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
     def get_command_dict(self) -> dict:
