@@ -23,12 +23,10 @@ class CommandGetSupport(CommandBase):
     def execute_command(self, chat_id: int, command_message: str) -> None:
         system_message = """
         You are a system for writing uplifting message of support.
-        Never add a header to your message like "Dear Jaap".
-        Never add a footer to your message like warm regards.
+        Never add a header to your message like "Dear [name]".
+        Never add a footer to your message like "warm regards".
         """
-        user_message = (
-            """Please write me, Jaap, a very brief telegram style message of support and happiness for the day?"""
-        )
+        user_message = """Please write me a very brief telegram style message of support and happiness for the day?"""
         completion = self.client_openai.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
