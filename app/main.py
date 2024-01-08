@@ -2,8 +2,9 @@ import logging
 import os
 
 from telegram import Update
-from telegram.ext import CallbackContext, CommandHandler, Updater
+from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater
 
+from srai_athena_frontend_telegram.dao.dao_message import DaoMessage
 from srai_athena_frontend_telegram.service_sceduling import ServiceSceduling
 from srai_athena_frontend_telegram.service_telegram_bot import ServiceTelegramBot
 
@@ -18,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 class SraiTelegramBot(ServiceTelegramBot):
-    def __init__(self, token: str):
+    def __init__(self, token: str, dao_message: DaoMessage):
         root_id = int(os.environ["TELEGRAM_ROOT_ID"])
-        super().__init__(token, root_id)
+        super().__init__(token, root_id, dao_message)
         self.list_available_command = []
         self.list_available_command.append("help")
         self.list_available_command.append("image_tag")
@@ -67,7 +68,9 @@ class SraiTelegramBot(ServiceTelegramBot):
             self.updater.dispatcher.add_handler(CommandHandler("help", self.help))
             self.updater.dispatcher.add_handler(CommandHandler("image_tag", self.image_tag))
             self.updater.dispatcher.add_handler(CommandHandler("chat_id", self.chat_id))
-            # dp.add_handler(CommandHandler("reset", self.reset))
+
+            # add text handler
+            self.updater.dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, self.handle_text))
             # self.register_skill(Postplan())
             self.register_skill(Scedule(self))
             self.register_skill(Support(self))
@@ -100,8 +103,11 @@ if __name__ == "__main__":
     telegram_token = os.environ.get("SRAI_TELEGRAM_TOKEN")
     if telegram_token is None:
         raise Exception("SRAI_TELEGRAM_TOKEN not set")
+    connection_string = os.environ["MONGODB_CONNECTION_STRING"]
+    database_name = os.environ["MONGODB_DATABASE_NAME"]
 
-    bot = SraiTelegramBot(token=telegram_token)
+    dao_message = DaoMessage(connection_string, database_name)
+    bot = SraiTelegramBot(token=telegram_token, dao_message=dao_message)
     # initialize services
     ServiceSceduling.initialize(bot)
     bot.initialize()
