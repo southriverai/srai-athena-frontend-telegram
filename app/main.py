@@ -7,8 +7,7 @@ from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandle
 from srai_athena_frontend_telegram.dao.dao_message import DaoMessage
 from srai_athena_frontend_telegram.service_sceduling import ServiceSceduling
 from srai_athena_frontend_telegram.service_telegram_bot import ServiceTelegramBot
-
-# from srai_athena_frontend_telegram.skill.postplan import Postplan
+from srai_athena_frontend_telegram.skill.postplan import Postplan
 from srai_athena_frontend_telegram.skill.scedule import Scedule
 from srai_athena_frontend_telegram.skill.support import Support
 
@@ -71,7 +70,7 @@ class SraiTelegramBot(ServiceTelegramBot):
 
             # add text handler
             self.updater.dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, self.handle_text))
-            # self.register_skill(Postplan())
+            self.register_skill(Postplan(self))
             self.register_skill(Scedule(self))
             self.register_skill(Support(self))
 

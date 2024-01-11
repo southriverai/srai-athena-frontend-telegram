@@ -1,5 +1,4 @@
 import os
-import re
 import time
 import uuid
 from hashlib import sha256

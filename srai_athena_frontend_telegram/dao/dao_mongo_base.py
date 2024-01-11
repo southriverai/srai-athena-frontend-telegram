@@ -23,5 +23,5 @@ class DaoMongoBase:
         # TODO fix cursoring
         return self.collection.find(query)  # type: ignore
 
-    def update_one(self, query: dict, update: dict) -> None:
-        self.collection.update_one(query, update)
+    def update_one(self, query: dict, update: dict, upsert=False) -> None:
+        self.collection.update_one(query, update, upsert)

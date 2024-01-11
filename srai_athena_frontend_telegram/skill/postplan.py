@@ -3,141 +3,173 @@ import json
 import os
 
 from openai import OpenAI
-from telegram import Update
-from telegram.ext import CallbackContext
 
 from srai_athena_frontend_telegram.service_telegram_bot import ServiceTelegramBot
+from srai_athena_frontend_telegram.skill.command_base import CommandBase
 from srai_athena_frontend_telegram.skill.skill_base import SkillBase
 
 
-class Postplan(SkillBase):
-    def __init__(self, service_telegram_bot: ServiceTelegramBot):
-        super().__init__(service_telegram_bot)
-        self.client_openai = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+def get_postplan_dict(skill_state: dict) -> dict:
+    postplan = {}
+    postplan["plan"] = {}
+    postplan["plan"] = {
+        "monday": {
+            "title": "Manual Monday",
+            "time_gmt": "12:00",
+            "generator_type": "manual",
+            "goal": "Manual Monday is a day where we post a manual on project athena. ",
+        },
+        "tuesday": {
+            "title": "Turbulent Tuesday",
+            "time_gmt": "12:00",
+            "generator_type": "hackernews",
+            "goal": "Generate a 500 word linkedin blog based on the weekly news",
+        },
+        "wednesday": {
+            "title": "Wired Wednesday",
+            "time_gmt": "12:00",
+            "generator_type": "github",
+            "goal": "Generate a 500 word linkedin blog showcasing the weekly code changes. ",
+        },
+        "thursday": {
+            "title": "Image Thursday",
+            "time_gmt": "12:00",
+            "generator_type": "image",
+            "goal": "Generate a 500 word linkedin blog filled with corperate bullshit. ",
+        },
+        "friday": {
+            "title": "Voicenote Friday",
+            "time_gmt": "12:00",
+            "generator_type": "voice",
+            "goal": "MGenerate a 500 word linkedin blog based on a series of voicenotes. ",
+        },
+    }
+    postplan["scedule"] = {}
+    date_today = datetime.datetime.now()
+    for i in range(7):
+        date = date_today + datetime.timedelta(days=i)
+        date_str = date.strftime("%Y-%m-%d")
+        day = date.strftime("%A").lower()
+        if day in postplan["plan"]:
+            postplan["scedule"][date_str] = postplan["plan"][day]
+    return postplan
+    # generate scedule for the next 7 days
 
-    def get_command_dict(self) -> dict:
-        dict_command = {}
-        dict_command["postplan"] = self.parse_message_postplan
-        dict_command["postgenerate"] = self.parse_message_postgenerate
-        return dict_command
 
-    def parse_message_postplan(self, update: Update, context: CallbackContext):
-        skill_state = self.load_skill_state(update.message.chat_id)
-        message = self.parse_command_postplan(skill_state, update.message.text)
-        self.save_skill_state(update.message.chat_id, skill_state)
-        update.message.reply_text(message)
+class CommandPostplan(CommandBase):
+    def __init__(self, skill: SkillBase) -> None:
+        super().__init__(skill, "postplan")
 
-    def parse_message_postgenerate(self, update: Update, context: CallbackContext):
-        skill_state = self.load_skill_state(update.message.chat_id)
-        message = self.parse_command_postgenerate(skill_state, update.message.text)
-        self.save_skill_state(update.message.chat_id, skill_state)
-        update.message.reply_text(message)
+    def get_usage(self) -> str:
+        return """
+        Usage:
+        /postplan {date}
+        Example:
+        /postplan 2024-01-04
+        Description:
+        Gets a postplan for a specified date.
+        """
 
-    def parse_command_postplan(self, skill_state: dict, message: str):
-        command_part = message.split(" ")
+    def execute_command(self, chat_id: int, command_message: str) -> None:
+        command_part = command_message.split(" ")
+        skill_state = {}
+        # parse chat_id
         if 1 < len(command_part):
             date = command_part[1]
         else:
             date = None
 
         if date is not None:
-            return self.get_postplan_date(
+            self.get_postplan_date(
+                chat_id,
                 skill_state,
                 date,
             )
         else:
-            return self.get_postplan(
+            self.get_postplan(
+                chat_id,
                 skill_state,
             )
 
-    def parse_command_postgenerate(self, skill_state: dict, message: str):
-        command_part = message.split(" ")
-        if 1 < len(command_part):
-            date = command_part[1]
-        else:
-            date = None
-
-        if date is None:
-            return "Please provide a valid date argument"
-        else:
-            return self.postgenerate(skill_state, date)
-
-    def get_postplan_dict(self, skill_state: dict) -> dict:
-        postplan = {}
-        postplan["plan"] = {}
-        postplan["plan"] = {
-            "monday": {
-                "title": "Manual Monday",
-                "time_gmt": "12:00",
-                "goal": "Manual Monday is a day where we post a manual on project athena. ",
-            },
-            "tuesday": {
-                "title": "Turbulent Tuesday",
-                "time_gmt": "12:00",
-                "goal": "Generate a 500 word linkedin blog based on the weekly news",
-            },
-            "wednesday": {
-                "title": "Wired Wednesday",
-                "time_gmt": "12:00",
-                "goal": "Generate a 500 word linkedin blog showcasing the weekly code changes. ",
-            },
-            "thursday": {
-                "title": "Trepid Thursday",
-                "time_gmt": "12:00",
-                "goal": "Generate a 500 word linkedin blog filled with corperate bullshit. ",
-            },
-            "friday": {
-                "title": "Voicenote Friday",
-                "time_gmt": "12:00",
-                "goal": "MGenerate a 500 word linkedin blog based on a series of voicenotes. ",
-            },
-        }
-        postplan["scedule"] = {}
-        date_today = datetime.datetime.now()
-        for i in range(7):
-            date = date_today + datetime.timedelta(days=i)
-            date_str = date.strftime("%Y-%m-%d")
-            day = date.strftime("%A").lower()
-            if day in postplan["plan"]:
-                postplan["scedule"][date_str] = postplan["plan"][day]
-        return postplan
-        # generate scedule for the next 7 days
-
     def get_postplan(
         self,
+        chat_id: int,
         skill_state: dict,
-    ) -> str:
-        postplan = self.get_postplan_dict(skill_state)
+    ) -> None:
+        postplan = get_postplan_dict(skill_state)
         message = "Postplan" + json.dumps(postplan, indent=4, sort_keys=True)
-        return message
+        self.skill.service_telegram_bot.message_chat(chat_id, message)
 
     def get_postplan_date(
         self,
+        chat_id: int,
         skill_state: dict,
         date: str,
-    ) -> str:
-        postplan = self.get_postplan_dict(skill_state)
+    ) -> None:
+        postplan = get_postplan_dict(skill_state)
         if date in postplan["scedule"]:
             postplan_date = postplan["scedule"][date]
             message = "Postplan date" + json.dumps(postplan_date, indent=4, sort_keys=True)
-            return message
+            self.skill.service_telegram_bot.message_chat(chat_id, message)
         else:
             message = "no postplan found for date: " + date
-            return message
+            self.skill.service_telegram_bot.message_chat(chat_id, message)
+
+
+class CommandPostGenerate(CommandBase):
+    def __init__(self, skill: SkillBase) -> None:
+        super().__init__(skill, "postgenerate")
+        self.client_openai = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+
+    def get_usage(self) -> str:
+        return """
+        Usage:
+        /postgenerate {date}
+        Example:
+        /postgenerate 2024-01-04
+        Description:
+        Generates a post for a specified date.
+        """
+
+    def execute_command(self, chat_id: int, command_message: str) -> None:
+        command_part = command_message.split(" ")
+        date = None
+        if 1 < len(command_part):
+            date = command_part[1]
+        else:
+            message = "Please provide a valid date argument"
+            message += self.get_usage()
+            self.skill.service_telegram_bot.message_chat(chat_id, message)
+            return
+        if date == "today":
+            date = datetime.datetime.now().strftime("%Y-%m-%d")
+        self.postgenerate(chat_id, date)
 
     def postgenerate(
         self,
-        skill_state: dict,
+        chat_id: int,
         date: str,
-    ) -> str:
-        postplan = self.get_postplan_dict(skill_state)
-        if date in skill_state:
-            message = skill_state[date]
-            message = "Postplan date" + json.dumps(postplan_date, indent=4, sort_keys=True)
-            return message
-        if date in postplan["scedule"]:
+    ) -> None:
+        skill_state = self.skill.load_skill_state(chat_id)
+        postplan = get_postplan_dict(skill_state)
+        # if date in skill_state:
+        #     postplan_date
+        #     message = skill_state[date]
+        #     message = "Postplan date" + json.dumps(postplan_date, indent=4, sort_keys=True)
+        #     return message
+
+        if date not in postplan["scedule"]:
+            message = "no postplan found for date: " + date
+            self.skill.service_telegram_bot.message_chat(chat_id, message)
+        else:
             postplan_date = postplan["scedule"][date]
 
+            if postplan_date["generator_type"] == "hackernews":
+                message = "Generating Hackernews Post"
+                self.skill.service_telegram_bot.message_chat(chat_id, message)
+                message = self.postgenerate_hackernews(postplan_date)
+            else:
+                message = "generator_type not supported"
             system_message = {
                 "role": "system",
                 "content": """
@@ -171,6 +203,13 @@ class Postplan(SkillBase):
 
             message = postplan_date["title"] + "\n" + response.choices[0].message.content + suffix
             return message
-        else:
-            message = "no postplan found for date: " + date
-            return message
+
+    def postgenerate_hackernews(self):
+
+
+
+class Postplan(SkillBase):
+    def __init__(self, service_telegram_bot: ServiceTelegramBot):
+        super().__init__(service_telegram_bot)
+        self.add_command(CommandPostplan(self))
+        self.add_command(CommandPostGenerate(self))

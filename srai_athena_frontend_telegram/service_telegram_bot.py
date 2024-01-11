@@ -3,7 +3,7 @@ from typing import Dict
 from uuid import uuid4
 
 from telegram import Update
-from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler, Updater
+from telegram.ext import CallbackContext, CommandHandler, Updater
 
 from srai_athena_frontend_telegram.dao.chat_message import ChatMessage
 from srai_athena_frontend_telegram.dao.dao_message import DaoMessage
@@ -14,7 +14,7 @@ from srai_athena_frontend_telegram.skill.skill_base import SkillBase
 class ServiceTelegramBot(ABC):
     def __init__(self, bot_token, root_id: int, dao_message: DaoMessage):
         self.bot_token = bot_token
-        self.updater: Updater = None
+        self.updater: Updater = None  # type: ignore
         self.root_id = root_id
         self.list_admin_ids = [root_id]
         self.dict_skill: Dict[str, SkillBase] = {}

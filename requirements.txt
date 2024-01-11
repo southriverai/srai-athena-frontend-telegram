@@ -4,3 +4,8 @@ pytube==15.0.0 #TODO move this to srai-job-ingest
 openai==1.6.1 #TODO move this to a other dependency
 srai-core>=0.10.3
 pymongo==4.6.1
+
+# for generating stuff
+haxor==1.2.4
+beautifulsoup4==4.12.2
+PyGithub==2.1.1
