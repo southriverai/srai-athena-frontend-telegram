@@ -8,6 +8,31 @@ class GeneratorPost:
     def __init__(self):
         self.client_openai = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
+    def generate_title(self, text: str):
+        promt = """
+        Given the following text, generate a title for a blog post for a socail media AI company:
+        """
+        promt += text
+
+        system_message = {
+            "role": "system",
+            "content": "You are a asssitent for generating titles for blog posts",
+        }
+        promt_message = {
+            "role": "user",
+            "content": promt,
+        }
+        list_message = []
+        list_message.append(system_message)
+        list_message.append(promt_message)
+        response = self.client_openai.chat.completions.create(
+            model="gpt-4",
+            messages=list_message,
+            temperature=1,
+        )
+        print(response.choices[0].message)
+        return str(response.choices[0].message.content)
+
     def generate(self, dict_post_template: dict) -> dict:
         # dict_post_template_short = {"goal": dict_post_template["goal"]}
         # dict_post_template_short["list_data_source"] = []
@@ -72,9 +97,12 @@ class GeneratorPost:
         Content repo
         https://lnkd.in/e9ZhJeQZ
         """
+        text_generated: str = response.choices[0].message.content  # type: ignore
+        title = self.generate_title(text_generated)
         dict_post = {
-            "title": "title_0",
-            "text generated": response.choices[0].message.content,
+            "title": title,
+            "text generated": text_generated,
             "suffix": suffix,
         }
+
         return dict_post

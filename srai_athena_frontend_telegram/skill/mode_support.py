@@ -70,7 +70,7 @@ class ModeSupport(ModeBase):
 
     def save_state(self, chat_id_str: str, state: ModeSupportState) -> None:
         print("saving state")
-        result = self.dao_state.update_one(
+        self.dao_state.update_one(
             {"chat_id_str": chat_id_str},
             {"$set": {"state": state.to_dict()}},
             upsert=True,

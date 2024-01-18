@@ -204,9 +204,6 @@ class CommandPostGenerate(CommandBase):
             message = postplan_date["title"] + "\n" + response.choices[0].message.content + suffix
             return message
 
-    def postgenerate_hackernews(self):
-
-
 
 class Postplan(SkillBase):
     def __init__(self, service_telegram_bot: ServiceTelegramBot):

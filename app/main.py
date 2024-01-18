@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 
 
 class SraiTelegramBot(ServiceTelegramBot):
-    def __init__(self, token: str, dao_message: DaoMessage):
+    def __init__(self, token: str):
         root_id = int(os.environ["TELEGRAM_ROOT_ID"])
-        super().__init__(token, root_id, dao_message)
+        super().__init__(token, root_id)
         self.list_available_command = []
         self.list_available_command.append("help")
         self.list_available_command.append("image_tag")
@@ -106,9 +106,9 @@ if __name__ == "__main__":
     database_name = os.environ["MONGODB_DATABASE_NAME"]
 
     dao_message = DaoMessage(connection_string, database_name)
-    bot = SraiTelegramBot(token=telegram_token, dao_message=dao_message)
+    bot = SraiTelegramBot(token=telegram_token)
     # initialize services
-    ServiceSceduling.initialize(bot)
+    # ServiceSceduling.initialize(bot)
     bot.initialize()
 
     # start services

@@ -6,20 +6,27 @@ from telegram import Update
 from telegram.ext import CallbackContext, CommandHandler, Updater
 
 from srai_athena_frontend_telegram.dao.chat_message import ChatMessage
-from srai_athena_frontend_telegram.dao.dao_message import DaoMessage
+from srai_athena_frontend_telegram.service_persistency import ServicePersistency
 from srai_athena_frontend_telegram.skill.command_base import CommandBase
 from srai_athena_frontend_telegram.skill.skill_base import SkillBase
 
 
 class ServiceTelegramBot(ABC):
-    def __init__(self, bot_token, root_id: int, dao_message: DaoMessage):
+    def __init__(
+        self,
+        bot_token,
+        root_id: int,
+    ):
         self.bot_token = bot_token
         self.updater: Updater = None  # type: ignore
         self.root_id = root_id
         self.list_admin_ids = [root_id]
         self.dict_skill: Dict[str, SkillBase] = {}
         self.dict_command: Dict[str, CommandBase] = {}
-        self.dao_message = dao_message
+        self.initialize()
+
+    def initialize(self):
+        self.dao_message = ServicePersistency.get_instance().dao_message
 
     def register_skill(self, skill: SkillBase):
         if skill.skill_name in self.dict_skill:
@@ -40,7 +47,8 @@ class ServiceTelegramBot(ABC):
         chat_id = str(update.message.chat_id)
         author_id = str(update.message.from_user.id)
         author_name = update.message.from_user.username
-        message = ChatMessage(message_id, chat_id, author_id, author_name, update.message.text)
+        message_content = {"message_content_type": "text", "text": update.message.text}
+        message = ChatMessage(message_id, chat_id, author_id, author_name, message_content)
         self.dao_message.save_message(message)
         # TODO move this to a skill or mode
 
@@ -54,4 +62,5 @@ class ServiceTelegramBot(ABC):
     def message_chat(self, chat_id: int, text: str):
         self.updater.bot.send_message(chat_id=chat_id, text=text)
         message_id = str(uuid4())
-        self.dao_message.save_message(ChatMessage(message_id, str(chat_id), "0", "bot", text))
+        message_content = {"message_content_type": "text", "text": text}
+        self.dao_message.save_message(ChatMessage(message_id, str(chat_id), "0", "bot", message_content))

@@ -10,7 +10,7 @@ from openai import OpenAI
 from srai_athena_frontend_telegram.generator_post import GeneratorPost
 
 
-class GeneratorHackerNews:
+class GeneratorHackernews:
     def __init__(self):
         pass
 
@@ -28,6 +28,7 @@ class GeneratorHackerNews:
         post_template = self.build_template(dict_story, list_selected_title)
 
         post = GeneratorPost().generate(post_template)
+
         return post
 
     # promt openai
@@ -90,7 +91,7 @@ class GeneratorHackerNews:
                     text = self.extract_text_from_html(html_text)
                 else:
                     text = item.text
-                dict_prompt["list_data_source"].append({"title": item.title, "url": item.url, "text": text})
+                dict_prompt["list_data_source"].append({"title": item.title, "url": item.url, "text": text[:1000]})
             except Exception as e:
                 print(e)
                 continue
